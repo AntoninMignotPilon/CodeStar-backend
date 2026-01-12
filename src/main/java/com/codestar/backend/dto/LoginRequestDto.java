@@ -1,6 +1,6 @@
 package com.codestar.backend.dto;
 
-public class LoginRequest {
+public class LoginRequestDto {
     private String username;
     private String password;
 

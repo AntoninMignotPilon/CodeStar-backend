@@ -1,10 +1,10 @@
 package com.codestar.backend.dto;
 
-public class LoginResponse {
+public class LoginResponseDto {
     private String token;
     private String message;
 
-    public LoginResponse(String token, String message) {
+    public LoginResponseDto(String token, String message) {
         this.token = token;
         this.message = message;
     }
