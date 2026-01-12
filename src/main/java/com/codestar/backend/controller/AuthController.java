@@ -1,0 +1,26 @@
+package com.codestar.backend.controller;
+
+import com.codestar.backend.dto.LoginRequest;
+import com.codestar.backend.dto.LoginResponse;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
+public class AuthController {
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest request){
+
+        if("admin".equals(request.getUsername()) && "password".equals(request.getPassword())){
+            return ResponseEntity.ok(new LoginResponse("123456789", "Connexion réussie"));
+        }
+        else{
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+}

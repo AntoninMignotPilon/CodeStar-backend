@@ -1,4 +1,4 @@
-package com.codestar.backend;
+package com.codestar.backend.model;
 
 public class Course {
     private Long id;

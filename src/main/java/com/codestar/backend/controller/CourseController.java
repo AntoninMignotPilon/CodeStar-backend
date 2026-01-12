@@ -1,11 +1,12 @@
-package com.codestar.backend;
+package com.codestar.backend.controller;
+import com.codestar.backend.model.Course;
 import  org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @RestController
-@RequestMapping
+@RequestMapping("/api/courses")
 @CrossOrigin(origins = "*")
 public class CourseController {
 
