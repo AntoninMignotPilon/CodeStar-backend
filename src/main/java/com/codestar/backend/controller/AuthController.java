@@ -8,6 +8,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/auth")
 @CrossOrigin(origins = "*")
@@ -22,12 +24,18 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request){
 
-        if("admin".equals(request.getUsername()) && "password".equals(request.getPassword())){
-            return ResponseEntity.ok(new LoginResponseDto("123456789", "Connexion réussie"));
-        }
-        else{
+        Optional<User> userOptionnal = userRepository.findByUsername(request.getUsername());
+
+        if (userOptionnal.isEmpty()){
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
+
+        User user = userOptionnal.get();
+        if (user.getPassword().equals(request.getPassword())){
+            return ResponseEntity.ok(new LoginResponseDto("123456789", "Connexion réussie"));
+        }
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
     }
 
     @PostMapping("/register")
