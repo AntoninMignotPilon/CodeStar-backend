@@ -4,8 +4,10 @@ import com.codestar.backend.dto.LoginRequestDto;
 import com.codestar.backend.dto.LoginResponseDto;
 import com.codestar.backend.model.User;
 import com.codestar.backend.repository.IUserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
@@ -16,6 +18,9 @@ import java.util.Optional;
 public class AuthController {
 
     private final IUserRepository userRepository;
+
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
     public AuthController(IUserRepository userRepository){
         this.userRepository = userRepository;
@@ -31,7 +36,7 @@ public class AuthController {
         }
 
         User user = userOptionnal.get();
-        if (user.getPassword().equals(request.getPassword())){
+        if (passwordEncoder.matches(request.getPassword(), user.getPassword())){
             return ResponseEntity.ok(new LoginResponseDto("123456789", "Connexion réussie"));
         }
 
@@ -39,8 +44,52 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public User register(@RequestBody User user){
-        return userRepository.save(user);
+    public ResponseEntity<String> register(@RequestBody User user){
+        if(userRepository.findByUsername(user.getUsername()).isPresent()){
+            return ResponseEntity.status(HttpStatus.CONFLICT).body("Nom d'utilisateur non disponible");
+        }
+        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        userRepository.save(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body("Compte créé");
     }
 
+
+
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
