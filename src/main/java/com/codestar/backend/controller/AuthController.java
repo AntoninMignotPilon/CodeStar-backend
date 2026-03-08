@@ -4,6 +4,7 @@ import com.codestar.backend.dto.LoginRequestDto;
 import com.codestar.backend.dto.LoginResponseDto;
 import com.codestar.backend.model.User;
 import com.codestar.backend.repository.IUserRepository;
+import com.codestar.backend.utils.JwtUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,12 +19,14 @@ import java.util.Optional;
 public class AuthController {
 
     private final IUserRepository userRepository;
+    private final JwtUtils jwtUtils;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public AuthController(IUserRepository userRepository){
+    public AuthController(IUserRepository userRepository, JwtUtils jwtUtils){
         this.userRepository = userRepository;
+        this.jwtUtils = jwtUtils;
     }
 
     @PostMapping("/login")
@@ -37,7 +40,8 @@ public class AuthController {
 
         User user = userOptionnal.get();
         if (passwordEncoder.matches(request.getPassword(), user.getPassword())){
-            return ResponseEntity.ok(new LoginResponseDto("123456789", "Connexion réussie"));
+            String token = jwtUtils.generateToken(user.getUsername());
+            return ResponseEntity.ok(new LoginResponseDto(token, "Connexion réussie"));
         }
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
