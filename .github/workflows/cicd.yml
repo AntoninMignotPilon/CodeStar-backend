@@ -66,10 +66,10 @@ jobs:
       run: mvn verify -B --no-transfer-progress -DskipTests # idem, tests d'intégrations ici
 
     - name: Upload Integration tests report
-      uses: target/failsafe-reports/
+      uses: actions/upload-artifact@v4
       if: always()
       with:
-        path: actions/upload-artifact@v4
+        path: target/failsafe-reports/
         retention-days: 7
         if-no-files-found: warn
         compression-level: 6
@@ -127,7 +127,7 @@ jobs:
 
     #! Phase de Déploiement
     - name: Deploy via Dokploy # CD via appel API Dokploy
-      if: github.ref == ref/heads/main && github.event_name == 'push'
+      if: github.ref == 'ref/heads/main' && github.event_name == 'push'
       run: |
         curl -X 'POST' \
           '${{ secrets.DOKPLOY_URL }}/api/application.deploy' \
