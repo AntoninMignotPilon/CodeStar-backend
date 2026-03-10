@@ -174,13 +174,13 @@ jobs:
         avatar_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEH-nkefqQOD6TMEeQObE7AeB5A9y3xP7Wkw&s"
       
     - name: Discord — déploiement
-    if: success() && github.event_name == 'push'
-    uses: sarisia/actions-status-discord@v1
-    with:
-      webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      title: "🚀 Déployé en prod"
-      color: 0x3DFA0C
-      username: "GitHub CI BackEnd"
+      if: success() && github.event_name == 'push'
+      uses: sarisia/actions-status-discord@v1
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        title: "🚀 Déployé en prod"
+        color: 0x3DFA0C
+        username: "GitHub CI BackEnd"
 
     
 
