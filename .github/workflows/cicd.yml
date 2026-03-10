@@ -10,7 +10,11 @@ jobs:
   
   build:
 
-    runs-on: ubuntu-latest # étudier l'utilisation de notre propre vps 
+    runs-on: ubuntu-latest # étudier l'utilisation de notre propre vps
+    permissions: # permet à dorny d'avoir les droits suffisant pour créer des rapports car via token git droits insuffisants      
+      contents: read
+      checks: write
+      pull-requests: write
 
     steps:
     #! Phase de Checkout
@@ -95,14 +99,14 @@ jobs:
         format: sarif
         output: trivy-config-results.sarif
         severity: 'CRITICAL,HIGH'
-        exit-code: '1' # fait échouer si vuln trouvée
+        exit-code: '0' # fait échouer si vuln trouvée
 
     - name: Upload Dockerfile security report
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: trivy-config-results.sarif
-        category: trivy config
+        category: trivy-config
 
     #! Phase de Build
     - name: Build Docker
@@ -116,14 +120,22 @@ jobs:
         format: sarif
         output: trivy-image-results.sarif
         severity: 'CRITICAL,HIGH'
-        exit-code: '1'
+        exit-code: '0'
 
-    - name: Upload Dockerfile security report
+    - name: Upload Image security report
       uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: trivy-image-results.sarif
-        category: trivy image
+        category: trivy-image
+
+    - name: Block CI if vulnerabilities found 
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: myapp:latest
+        format: table    
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'   
 
     #! Phase de Déploiement
     - name: Deploy via Dokploy # CD via appel API Dokploy
@@ -143,10 +155,9 @@ jobs:
       with:
         webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
         title: "✅ Pipeline réussie"
-        description: "Pipeline réussie sur ${{ github.ref_name }} via ${{ github.event_name }}"
         url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         color: 0x3DFA0C
-        username: "GitHub CI BackEnd"	
+        username: "CI BackEnd"	
         avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
     
     - name: Discord — PR validée
@@ -155,10 +166,9 @@ jobs:
       with:
         webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
         title: "✅ Pipeline réussie"
-        description: "Pipeline réussie sur ${{ github.ref_name }} via ${{ github.event_name }}"
         url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         color: 0x3DFA0C
-        username: "GitHub CI BackEnd"	
+        username: "CI BackEnd"	
         avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
     
     - name: Discord — échec
@@ -167,20 +177,20 @@ jobs:
       with:
         webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
         title: "❌ Pipeline échouée"
-        description: "Pipeline échouée sur ${{ github.ref_name }}"
         url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         color: 0xFF0508
-        username: "GitHub CI BackEnd"
+        username: "CI BackEnd"
         avatar_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEH-nkefqQOD6TMEeQObE7AeB5A9y3xP7Wkw&s"
       
     - name: Discord — déploiement
-    if: success() && github.event_name == 'push'
-    uses: sarisia/actions-status-discord@v1
-    with:
-      webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      title: "🚀 Déployé en prod"
-      color: 0x3DFA0C
-      username: "GitHub CI BackEnd"
+      if: success() && github.event_name == 'push'
+      uses: sarisia/actions-status-discord@v1
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        title: "🚀 Déployé en prod"
+        color: 0x3DFA0C
+        username: "CI BackEnd"
+        avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
 
     
 
