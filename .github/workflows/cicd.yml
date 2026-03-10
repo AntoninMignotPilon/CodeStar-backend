@@ -1,0 +1,190 @@
+name: CI Backend Java (Maven Tomcat)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  
+  build:
+
+    runs-on: ubuntu-latest # étudier l'utilisation de notre propre vps 
+
+    steps:
+    #! Phase de Checkout
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    #! Phase de Préparation de l'environnement
+    - name: Setup Environment
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21' 
+        distribution: 'temurin'
+        cache: 'maven' # ne retélécharge pas toutes les dépendances maven à chaque run -> gain de temps phénoménale
+
+    #! Phase de Compilation
+    - name: Compiling # séparation des étapes pour lisibilité et isolation des échecs
+      run: mvn compile -B # mode batch
+
+    #! Phase de Tests Unitaires
+    - name: Run JUnit test # à implémenter
+      run: mvn test -B 
+
+    - name: Upload Unit tests report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: junit-reports
+        path: target/surefire-reports/
+        retention-days: 7 # bonne pratique de persistance
+        if-no-files-found: warn # à modifier par error quand des tests seront implémentés
+        compression-level: 6 # compromis vitesse d'upload vs taille du fichier
+        overwrite: true
+
+    - name: Run JaCoCo test  # seuil de couverture à indiquer à terme dans le pom.xml
+      run: mvn test jacoco:report -B
+
+    - name: Upload Coverage test report
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        nmae: jacoco-coverage
+        path: target/site/jacoco/
+        retention-days: 7
+        if-no-files-found: warn # idem ici
+        compression-level: 6
+        overwrite: true
+
+    #! Phase de Packaging + Tests d'intégration
+    - name: Packaging 
+      run: mvn package -B --no-transfer-progress -DskipTests # skip les tests unitaires déjà réalisés
+
+    - name: Run tests & verify
+      run: mvn verify -B --no-transfer-progress -DskipTests # idem, tests d'intégrations ici
+
+    - name: Upload Integration tests report
+      uses: target/failsafe-reports/
+      if: always()
+      with:
+        path: actions/upload-artifact@v4
+        retention-days: 7
+        if-no-files-found: warn
+        compression-level: 6
+        overwrite: true
+
+    #! Phase d'affichage des rapports
+    - name: Show tests results
+      uses: dorny/test-reporter@v1
+      if: always()
+      with:
+        name: JUnit report
+        path: target/surefire-reports/*.xml
+        reporter: java-junit
+        fail-on-error: true
+        fail-on-empty: false # à modifier par true quand les tests seront rédigés
+
+    #! Phase de Sécurité Dockerfile
+    - name: Trivy scan Dockerfile
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'config'
+        scan-ref: '.'
+        format: sarif
+        output: trivy-config-results.sarif
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1' # fait échouer si vuln trouvée
+
+    - name: Upload Dockerfile security report
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: trivy-config-results.sarif
+        category: trivy config
+
+    #! Phase de Build
+    - name: Build Docker
+      run: docker build -t myapp:latest .
+
+    #! Phase de Sécurité image
+    - name: Trivy scan image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: myapp:latest
+        format: sarif
+        output: trivy-image-results.sarif
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'
+
+    - name: Upload Dockerfile security report
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: trivy-image-results.sarif
+        category: trivy image
+
+    #! Phase de Déploiement
+    - name: Deploy via Dokploy # CD via appel API Dokploy
+      if: github.ref == ref/heads/main && github.event_name == 'push'
+      run: |
+        curl -X 'POST' \
+          '${{ secrets.DOKPLOY_URL }}/api/application.deploy' \
+          -H 'accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -H 'x-api-key: ${{ secrets.DOKPLOY_API }}' \
+          -d '{ "applicationId": "${{ secrets.DOKPLOY_PROJECT_ID }}" }'
+
+    #! Notification Discord
+    - name: Discord — succès push
+      uses: sarisia/actions-status-discord@v1
+      if: success() && github.event_name == 'push'
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        title: "✅ Pipeline réussie"
+        description: "Pipeline réussie sur ${{ github.ref_name }} via ${{ github.event_name }}"
+        url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        color: 0x3DFA0C
+        username: "GitHub CI BackEnd"	
+        avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+    
+    - name: Discord — PR validée
+      uses: sarisia/actions-status-discord@v1
+      if: success() && github.event_name == 'pull_request'
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        title: "✅ Pipeline réussie"
+        description: "Pipeline réussie sur ${{ github.ref_name }} via ${{ github.event_name }}"
+        url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        color: 0x3DFA0C
+        username: "GitHub CI BackEnd"	
+        avatar_url: "https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png"
+    
+    - name: Discord — échec
+      uses: sarisia/actions-status-discord@v1
+      if: failure()
+      with:
+        webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+        title: "❌ Pipeline échouée"
+        description: "Pipeline échouée sur ${{ github.ref_name }}"
+        url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        color: 0xFF0508
+        username: "GitHub CI BackEnd"
+        avatar_url: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSEH-nkefqQOD6TMEeQObE7AeB5A9y3xP7Wkw&s"
+      
+    - name: Discord — déploiement
+    if: success() && github.event_name == 'push'
+    uses: sarisia/actions-status-discord@v1
+    with:
+      webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      title: "🚀 Déployé en prod"
+      color: 0x3DFA0C
+      username: "GitHub CI BackEnd"
+
+    
+
+
+
+
+
