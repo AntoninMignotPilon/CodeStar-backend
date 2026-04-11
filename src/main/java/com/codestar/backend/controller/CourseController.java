@@ -1,5 +1,8 @@
 package com.codestar.backend.controller;
+import com.codestar.backend.dto.ApiResponseDto;
 import com.codestar.backend.model.Course;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import  org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -20,12 +23,17 @@ public class CourseController {
 
 
     @GetMapping
-    public List<Course> getAllCourses(){
-        return courses;
+    public ResponseEntity<ApiResponseDto<List<Course>>> getAllCourses(){
+        return ResponseEntity.ok(new ApiResponseDto<>(true, "Cours récuperés", courses));
     }
 
     @GetMapping("/{id}")
-    public Course getCourseById(@PathVariable Long id){
-        return courses.stream().filter(c->c.getId().equals(id)).findFirst().orElse(null);
+    public ResponseEntity<ApiResponseDto<Course>> getCourseById(@PathVariable Long id){
+        return courses.stream()
+                .filter(c -> c.getId().equals(id))
+                .findFirst()
+                .map(course -> ResponseEntity.ok(new ApiResponseDto<>(true, "Cours recupere", course)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new ApiResponseDto<>(false, "Cours introuvable", null)));
     }
 }

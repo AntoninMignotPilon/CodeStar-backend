@@ -1,5 +1,6 @@
 package com.codestar.backend.controller;
 
+import com.codestar.backend.dto.ApiResponseDto;
 import com.codestar.backend.dto.LoginRequestDto;
 import com.codestar.backend.dto.LoginResponseDto;
 import com.codestar.backend.model.User;
@@ -30,31 +31,36 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponseDto> login(@RequestBody LoginRequestDto request){
+    public ResponseEntity<ApiResponseDto<LoginResponseDto>> login(@RequestBody LoginRequestDto request){
 
         Optional<User> userOptionnal = userRepository.findByUsername(request.getUsername());
 
         if (userOptionnal.isEmpty()){
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ApiResponseDto<>(false, "Identifiants invalides", null));
         }
 
         User user = userOptionnal.get();
         if (passwordEncoder.matches(request.getPassword(), user.getPassword())){
             String token = jwtUtils.generateToken(user.getUsername());
-            return ResponseEntity.ok(new LoginResponseDto(token, "Connexion réussie"));
+            LoginResponseDto loginData = new LoginResponseDto(token, "Bearer");
+            return ResponseEntity.ok(new ApiResponseDto<>(true, "Connexion réussie", loginData));
         }
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ApiResponseDto<>(false, "Identifiants invalides", null));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> register(@RequestBody User user){
+    public ResponseEntity<ApiResponseDto<Object>> register(@RequestBody User user){
         if(userRepository.findByUsername(user.getUsername()).isPresent()){
-            return ResponseEntity.status(HttpStatus.CONFLICT).body("Nom d'utilisateur non disponible");
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new ApiResponseDto<>(false, "Nom d'utilisateur non disponible", null));
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         userRepository.save(user);
-        return ResponseEntity.status(HttpStatus.CREATED).body("Compte créé");
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new ApiResponseDto<>(true, "Compte créé", null));
     }
 
 

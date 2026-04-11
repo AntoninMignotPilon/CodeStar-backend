@@ -1,15 +1,19 @@
 package com.codestar.backend.dto;
 
 public class LoginResponseDto {
-    private String token;
-    private String message;
+    private String accessToken;
+    private String tokenType;
 
-    public LoginResponseDto(String token, String message) {
-        this.token = token;
-        this.message = message;
+    public LoginResponseDto(String accessToken, String tokenType) {
+        this.accessToken = accessToken;
+        this.tokenType = tokenType;
     }
 
-    // Getters
-    public String getToken() { return token; }
-    public String getMessage() { return message; }
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+    public String getTokenType() {
+        return tokenType;
+    }
 }
